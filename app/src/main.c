@@ -1,48 +1,35 @@
-/*
- * Copyright (c) 2021 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
- */
 
+#include <stdio.h>
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/sensor.h>
-#include <app_version.h>
+#include <zephyr/device.h>
+#include <zephyr/init.h>
+#include <zephyr/drivers/uart.h>
 
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
+static void iface_uart_async_callback(const struct device *dev,
+				      struct uart_event *evt,
+				      void *user_data)
+{
+}
+
 
 int main(void)
 {
-	int ret;
-	const struct device *sensor;
-
-	printk("Zephyr Example Application %s\n", APP_VERSION_STRING);
-
-	sensor = DEVICE_DT_GET(DT_NODELABEL(examplesensor0));
-	if (!device_is_ready(sensor)) {
-		LOG_ERR("Sensor not ready");
-		return 0;
+	const struct device *dev = NULL;
+	dev = device_get_binding("uart0");
+	if (dev == NULL) {
+		printf("NULL!\n");
+	}
+	if (!device_is_ready(dev)) {
+		printf("UART %s is not ready", dev->name);
 	}
 
-	while (1) {
-		struct sensor_value val;
+	uart_callback_set(dev, iface_uart_async_callback, NULL);
 
-		ret = sensor_sample_fetch(sensor);
-		if (ret < 0) {
-			LOG_ERR("Could not fetch sample (%d)", ret);
-			return 0;
-		}
-
-		ret = sensor_channel_get(sensor, SENSOR_CHAN_PROX, &val);
-		if (ret < 0) {
-			LOG_ERR("Could not get sample (%d)", ret);
-			return 0;
-		}
-
-		printk("Sensor value: %d\n", val.val1);
-
+	for (int i = 0; i < 100; i++) {
 		k_sleep(K_MSEC(1000));
+		int ret = uart_tx(dev, "testing\n", 8, SYS_FOREVER_MS);
+		printf("muu %d\n", ret);
 	}
-
+	printf("Hello World! %s\n", CONFIG_BOARD);
 	return 0;
 }
-
